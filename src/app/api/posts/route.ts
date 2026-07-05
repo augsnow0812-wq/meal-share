@@ -45,20 +45,38 @@ export async function POST(request: Request) {
 
   const ext = file.type === "image/png" ? "png" : "jpg";
   const key = `posts/${userId}/${Date.now()}-${Math.floor(Math.random() * 1e6)}.${ext}`;
-  const blob = await put(key, file, {
-    access: "public",
-    addRandomSuffix: false,
-    contentType: file.type || "image/jpeg",
-  });
 
-  const post = await insertPost({
-    user_id: userId,
-    category,
-    photo_url: blob.url,
-    captured_at: capturedAt,
-    is_camera: isCamera,
-    memo: typeof memo === "string" && memo.trim() ? memo.trim().slice(0, 200) : null,
-  });
+  let blobUrl: string;
+  try {
+    const blob = await put(key, file, {
+      access: "public",
+      addRandomSuffix: false,
+      contentType: file.type || "image/jpeg",
+    });
+    blobUrl = blob.url;
+  } catch (e) {
+    const msg = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+    return Response.json(
+      { error: `blob upload failed — ${msg}` },
+      { status: 500 },
+    );
+  }
 
-  return Response.json({ post });
+  try {
+    const post = await insertPost({
+      user_id: userId,
+      category,
+      photo_url: blobUrl,
+      captured_at: capturedAt,
+      is_camera: isCamera,
+      memo: typeof memo === "string" && memo.trim() ? memo.trim().slice(0, 200) : null,
+    });
+    return Response.json({ post });
+  } catch (e) {
+    const msg = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+    return Response.json(
+      { error: `db insert failed — ${msg}` },
+      { status: 500 },
+    );
+  }
 }
