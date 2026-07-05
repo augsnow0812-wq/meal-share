@@ -55,8 +55,10 @@ export function WeeklyGrid() {
     );
   };
 
-  const totalByUser = (uid: UserId) =>
-    posts.filter((p) => p.user_id === uid).length;
+  const passedByUser = (uid: UserId) =>
+    posts.filter(
+      (p) => p.user_id === uid && computeVerdict(p.votes, p.user_id) === "pass",
+    ).length;
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-4 pb-32">
@@ -236,15 +238,20 @@ export function WeeklyGrid() {
         })}
       </div>
 
-      {/* Weekly summary */}
+      {/* Weekly summary — 통과 받은 식단 수 */}
       <section className="card rounded-2xl p-4 mb-4">
-        <h2 className="text-sm font-semibold mb-3 text-zinc-700">
-          이번 주 요약
-        </h2>
+        <div className="flex items-baseline justify-between mb-3">
+          <h2 className="text-sm font-semibold text-zinc-700">
+            이번 주 통과 ✅
+          </h2>
+          <span className="text-[11px] text-zinc-400">
+            둘 다 👍 받은 식단
+          </span>
+        </div>
         <div className="grid grid-cols-3 gap-3">
           {users.map((u) => {
             const theme = USER_THEME[u.id];
-            const total = totalByUser(u.id);
+            const passed = passedByUser(u.id);
             return (
               <div
                 key={u.id}
@@ -256,9 +263,9 @@ export function WeeklyGrid() {
                 </span>
                 <div className="flex items-baseline gap-1 mt-1">
                   <span className={`text-2xl font-bold ${theme.text}`}>
-                    {total}
+                    {passed}
                   </span>
-                  <span className="text-[11px] text-zinc-500">끼</span>
+                  <span className="text-[11px] text-zinc-500">통과</span>
                 </div>
               </div>
             );
