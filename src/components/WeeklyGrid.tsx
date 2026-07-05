@@ -2,9 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { addDays, format, isSameDay } from "date-fns";
-import { CATEGORY_EMOJI, CATEGORY_LABEL, type Post } from "@/lib/types";
-import { type UserId } from "@/lib/users";
+import { addDays, format, isSameDay, isToday } from "date-fns";
+import {
+  CATEGORY_EMOJI,
+  CATEGORY_LABEL,
+  computeVerdict,
+  type Post,
+} from "@/lib/types";
+import { USER_THEME, type UserId } from "@/lib/users";
 import { getWeekRange, WEEKDAYS } from "@/lib/week";
 import { useCurrentUser } from "./CurrentUserProvider";
 import { UserPicker } from "./UserPicker";
@@ -50,112 +55,230 @@ export function WeeklyGrid() {
     );
   };
 
+  const totalByUser = (uid: UserId) =>
+    posts.filter((p) => p.user_id === uid).length;
+
   return (
-    <div className="max-w-5xl mx-auto p-4 pb-24">
-      <header className="flex items-center justify-between mb-4">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-4 pb-32">
+      {/* Header */}
+      <header className="flex items-center justify-between mb-5">
         <button
           onClick={() => setEditing(true)}
-          className="text-sm text-zinc-600 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-zinc-100"
+          className={`group flex items-center gap-2 px-3 py-2 rounded-full card ring-2 ${me ? USER_THEME[me.id as UserId].ring : "ring-zinc-200"} transition active:scale-95`}
           title="닉네임 수정"
         >
-          <span>{me?.emoji}</span>
-          <span>{me?.name}</span>
-          <span className="text-zinc-400 text-xs">✎</span>
+          <span className="text-xl leading-none">{me?.emoji}</span>
+          <span className="font-medium text-sm">{me?.name}</span>
+          <span className="text-zinc-300 text-xs group-hover:text-zinc-500 transition">
+            ✎
+          </span>
         </button>
-        <h1 className="text-lg font-semibold">밥친구</h1>
+        <h1 className="text-lg sm:text-xl font-bold tracking-tight">
+          🍚 밥친구
+        </h1>
         <button
           onClick={() => setUserId(null)}
-          className="text-xs text-zinc-400 w-16 text-right"
+          className="text-[11px] text-zinc-400 hover:text-zinc-600 px-2 py-1"
         >
           내가 아냐?
         </button>
       </header>
 
-      <div className="flex items-center justify-between mb-3">
+      {/* Week navigator */}
+      <div className="card rounded-2xl px-4 py-3 flex items-center justify-between mb-4">
         <button
           onClick={() => setWeekOffset((n) => n - 1)}
-          className="px-3 py-1 rounded-lg border border-zinc-200"
+          className="w-9 h-9 rounded-full hover:bg-zinc-100 active:scale-90 transition flex items-center justify-center text-zinc-500"
+          aria-label="이전 주"
         >
           ◀
         </button>
         <div className="text-center">
-          <div className="font-medium">{week.label}</div>
-          {weekOffset === 0 && (
-            <div className="text-xs text-zinc-500">이번 주</div>
-          )}
+          <div className="font-semibold">{week.label}</div>
+          <div className="text-[11px] text-zinc-500 mt-0.5">
+            {weekOffset === 0 ? "이번 주" : `${-weekOffset}주 전`}
+          </div>
         </div>
         <button
           onClick={() => setWeekOffset((n) => n + 1)}
           disabled={weekOffset >= 0}
-          className="px-3 py-1 rounded-lg border border-zinc-200 disabled:opacity-30"
+          className="w-9 h-9 rounded-full hover:bg-zinc-100 active:scale-90 transition disabled:opacity-20 disabled:pointer-events-none flex items-center justify-center text-zinc-500"
+          aria-label="다음 주"
         >
           ▶
         </button>
       </div>
 
-      <div className="overflow-x-auto">
-        <div className="grid grid-cols-[80px_repeat(7,minmax(80px,1fr))] gap-1 min-w-full">
-          <div className="p-2 text-xs text-zinc-500" />
+      {/* Desktop: user × day grid */}
+      <div className="hidden md:block card rounded-2xl p-3 mb-4">
+        <div className="grid grid-cols-[100px_repeat(7,minmax(0,1fr))] gap-1.5">
+          <div />
           {WEEKDAYS.map((wd, i) => {
             const day = addDays(week.start, i);
+            const today = isToday(day);
             return (
               <div key={wd} className="p-2 text-center">
-                <div className="text-xs font-medium">{wd}</div>
-                <div className="text-xs text-zinc-400">
+                <div
+                  className={`text-xs font-semibold ${today ? "text-rose-600" : ""}`}
+                >
+                  {wd}
+                </div>
+                <div className={`text-[11px] mt-0.5 ${today ? "text-rose-500" : "text-zinc-400"}`}>
                   {format(day, "MM/dd")}
                 </div>
               </div>
             );
           })}
 
-          {users.map((u) => (
-            <div key={u.id} className="contents">
-              <div className="p-2 flex items-center gap-1 text-sm">
-                <span>{u.emoji}</span>
-                <span className="truncate">{u.name}</span>
-              </div>
-              {Array.from({ length: 7 }).map((_, di) => {
-                const items = cellPosts(u.id, di);
-                return (
-                  <div
-                    key={di}
-                    className="min-h-20 p-1 rounded-lg bg-zinc-50 flex flex-wrap gap-1 content-start"
-                  >
-                    {items.map((p) => (
-                      <button
-                        key={p.id}
-                        onClick={() => setSelected(p)}
-                        className="relative w-full aspect-square overflow-hidden rounded-md"
-                        title={CATEGORY_LABEL[p.category]}
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={p.photo_url}
-                          alt=""
-                          className="w-full h-full object-cover"
-                        />
-                        <span className="absolute bottom-0.5 right-0.5 text-xs bg-black/60 text-white rounded px-1">
-                          {CATEGORY_EMOJI[p.category]}
+          {users.map((u) => {
+            const theme = USER_THEME[u.id];
+            return (
+              <div key={u.id} className="contents">
+                <div className={`p-2 flex items-center gap-2 rounded-xl ${theme.soft}`}>
+                  <span className="text-lg">{u.emoji}</span>
+                  <span className="text-sm font-medium truncate">{u.name}</span>
+                </div>
+                {Array.from({ length: 7 }).map((_, di) => {
+                  const items = cellPosts(u.id, di);
+                  const day = addDays(week.start, di);
+                  const today = isToday(day);
+                  return (
+                    <div
+                      key={di}
+                      className={`min-h-24 p-1.5 rounded-xl bg-white/60 flex flex-wrap gap-1 content-start ${
+                        today ? "ring-1 ring-rose-200" : ""
+                      }`}
+                    >
+                      {items.length === 0 && (
+                        <span className="w-full text-center self-center text-[10px] text-zinc-300">
+                          ·
                         </span>
-                      </button>
-                    ))}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
+                      )}
+                      {items.map((p) => (
+                        <PostThumb
+                          key={p.id}
+                          post={p}
+                          onOpen={() => setSelected(p)}
+                        />
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
         </div>
       </div>
 
+      {/* Mobile: day-by-day vertical layout */}
+      <div className="md:hidden flex flex-col gap-3 mb-4">
+        {Array.from({ length: 7 }).map((_, di) => {
+          const day = addDays(week.start, di);
+          const today = isToday(day);
+          const dayHasAny = users.some((u) => cellPosts(u.id, di).length > 0);
+          return (
+            <div
+              key={di}
+              className={`card rounded-2xl p-3 ${today ? "ring-2 ring-rose-200" : ""}`}
+            >
+              <div className="flex items-baseline justify-between mb-2">
+                <div className="flex items-baseline gap-2">
+                  <span
+                    className={`font-semibold ${today ? "text-rose-600" : ""}`}
+                  >
+                    {WEEKDAYS[di]}
+                  </span>
+                  <span className="text-xs text-zinc-500">
+                    {format(day, "MM/dd")}
+                  </span>
+                  {today && (
+                    <span className="chip bg-rose-100 text-rose-600">
+                      오늘
+                    </span>
+                  )}
+                </div>
+                {!dayHasAny && (
+                  <span className="text-[11px] text-zinc-300">아직 없어요</span>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-2">
+                {users.map((u) => {
+                  const items = cellPosts(u.id, di);
+                  if (items.length === 0) return null;
+                  const theme = USER_THEME[u.id];
+                  return (
+                    <div key={u.id} className="flex items-center gap-2">
+                      <div
+                        className={`shrink-0 w-16 flex items-center gap-1 px-2 py-1 rounded-full ${theme.soft}`}
+                      >
+                        <span className="text-sm">{u.emoji}</span>
+                        <span className="text-[11px] font-medium truncate">
+                          {u.name}
+                        </span>
+                      </div>
+                      <div className="flex-1 flex flex-wrap gap-1.5">
+                        {items.map((p) => (
+                          <PostThumb
+                            key={p.id}
+                            post={p}
+                            onOpen={() => setSelected(p)}
+                            size="lg"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Weekly summary */}
+      <section className="card rounded-2xl p-4 mb-4">
+        <h2 className="text-sm font-semibold mb-3 text-zinc-700">
+          이번 주 요약
+        </h2>
+        <div className="grid grid-cols-3 gap-3">
+          {users.map((u) => {
+            const theme = USER_THEME[u.id];
+            const total = totalByUser(u.id);
+            return (
+              <div
+                key={u.id}
+                className={`rounded-2xl p-3 ${theme.soft} flex flex-col items-center gap-1`}
+              >
+                <span className="text-2xl">{u.emoji}</span>
+                <span className="text-xs font-medium truncate max-w-full">
+                  {u.name}
+                </span>
+                <div className="flex items-baseline gap-1 mt-1">
+                  <span className={`text-2xl font-bold ${theme.text}`}>
+                    {total}
+                  </span>
+                  <span className="text-[11px] text-zinc-500">끼</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
       {loading && (
-        <div className="text-center text-sm text-zinc-400 mt-4">불러오는 중...</div>
+        <div className="text-center text-sm text-zinc-400 mt-4">
+          불러오는 중...
+        </div>
       )}
 
+      {/* FAB */}
       <Link
         href="/upload"
-        className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-black text-white text-2xl flex items-center justify-center shadow-lg"
+        className="fixed bottom-6 right-6 h-14 pl-5 pr-6 rounded-full bg-gradient-to-br from-rose-500 to-amber-500 text-white text-base font-semibold flex items-center gap-2 shadow-xl shadow-rose-500/30 active:scale-95 transition"
       >
-        +
+        <span className="text-xl leading-none">+</span>
+        <span>기록하기</span>
       </Link>
 
       {selected && (
@@ -174,5 +297,63 @@ export function WeeklyGrid() {
         <NicknameEditor user={me} onClose={() => setEditing(false)} />
       )}
     </div>
+  );
+}
+
+function PostThumb({
+  post,
+  onOpen,
+  size = "sm",
+}: {
+  post: Post;
+  onOpen: () => void;
+  size?: "sm" | "lg";
+}) {
+  const dim = size === "lg" ? "w-20 h-20" : "w-full aspect-square";
+  const others = post.votes.filter((v) => v.voter_id !== post.user_id);
+  const passCount = others.filter((v) => v.vote === "pass").length;
+  const rejectCount = others.filter((v) => v.vote === "reject").length;
+  const verdict = computeVerdict(post.votes, post.user_id);
+
+  return (
+    <button
+      onClick={onOpen}
+      className={`relative ${dim} overflow-hidden rounded-lg ring-1 ring-black/5 active:scale-95 transition`}
+      title={CATEGORY_LABEL[post.category]}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={post.photo_url}
+        alt=""
+        className="w-full h-full object-cover"
+      />
+
+      {verdict === "pass" && (
+        <span className="absolute top-0.5 left-0.5 text-[10px] bg-emerald-500 text-white rounded-full px-1.5 py-0.5 leading-tight font-semibold shadow">
+          통과
+        </span>
+      )}
+      {verdict === "reject" && (
+        <span className="absolute top-0.5 left-0.5 text-[10px] bg-rose-500 text-white rounded-full px-1.5 py-0.5 leading-tight font-semibold shadow">
+          거부
+        </span>
+      )}
+      {verdict === "tie" && (
+        <span className="absolute top-0.5 left-0.5 text-[10px] bg-zinc-500 text-white rounded-full px-1.5 py-0.5 leading-tight font-semibold shadow">
+          무승부
+        </span>
+      )}
+
+      {(passCount > 0 || rejectCount > 0) && (
+        <span className="absolute top-0.5 right-0.5 text-[10px] bg-black/60 text-white rounded-full px-1.5 py-0.5 leading-tight flex items-center gap-0.5">
+          {passCount > 0 && <span>{passCount}👍</span>}
+          {rejectCount > 0 && <span>{rejectCount}👎</span>}
+        </span>
+      )}
+
+      <span className="absolute bottom-0.5 right-0.5 text-[10px] bg-black/55 text-white rounded-full px-1.5 py-0.5 leading-tight">
+        {CATEGORY_EMOJI[post.category]}
+      </span>
+    </button>
   );
 }

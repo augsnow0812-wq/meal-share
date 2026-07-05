@@ -1,26 +1,48 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fdf7f4;
+  --foreground: #1c1a1e;
+
+  /* per-user accent tokens (rose / amber / emerald) */
+  --u1: 244 63 94;
+  --u2: 245 158 11;
+  --u3: 16 185 129;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(1200px 600px at -10% -20%, rgb(244 63 94 / 0.10), transparent 60%),
+    radial-gradient(900px 500px at 110% 10%, rgb(16 185 129 / 0.10), transparent 60%),
+    radial-gradient(900px 700px at 50% 120%, rgb(245 158 11 / 0.10), transparent 60%),
+    var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "SF Pro Text",
+    "Segoe UI", Roboto, Arial, sans-serif;
+  min-height: 100dvh;
+}
+
+/* subtle card + interactive polish */
+.card {
+  background: rgb(255 255 255 / 0.72);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgb(0 0 0 / 0.05);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.04),
+    0 8px 24px -12px rgb(0 0 0 / 0.10);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 500;
 }

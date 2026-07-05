@@ -37,14 +37,14 @@ export function NicknameEditor({ user, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl w-full max-w-sm p-5 flex flex-col gap-4"
+        className="bg-white rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-lg font-semibold">닉네임 수정</h2>
+        <h2 className="text-lg font-semibold">닉네임 수정 ✎</h2>
         <p className="text-xs text-zinc-500 -mt-2">
           변경하면 친구들 화면에도 반영돼요.
         </p>
